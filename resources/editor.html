@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor</title>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+<!-- Qt WebChannel -->
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+
+<style>
+  /* ── Reset ────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Background (OmmWriter feel) ─────────────── */
+  html, body {
+    height: 100%;
+    background: #1c1c2e;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* ── Page wrapper ─────────────────────────────── */
+  #page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 96px;
+    min-height: 100%;
+  }
+
+  /* ── A4 Page ──────────────────────────────────── */
+  .page {
+    background: #ffffff;
+    width: 794px;         /* A4 @ 96 dpi */
+    min-height: 1123px;   /* A4 height */
+    padding: 100px 96px 80px 96px;  /* ~25mm margins */
+    margin-bottom: 48px;
+    box-shadow:
+      0 4px 24px rgba(0,0,0,0.55),
+      0 1px 4px rgba(0,0,0,0.3);
+    position: relative;
+    border-radius: 1px;
+  }
+
+  /* ── Page Footer (page number) ───────────────── */
+  .page-footer {
+    position: absolute;
+    bottom: 32px;
+    left: 96px;
+    right: 96px;
+    text-align: center;
+    font-size: 10pt;
+    color: #aaa;
+    font-family: 'Georgia', serif;
+    pointer-events: none;
+  }
+
+  /* ── Floating frames layer ────────────────────── */
+  .frames-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .frame {
+    position: absolute;
+    pointer-events: all;
+    border: 1px dashed #9b8fcc;
+    min-width: 80px;
+    min-height: 40px;
+    background: rgba(255,255,255,0.95);
+    cursor: move;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    border-radius: 2px;
+  }
+  .frame.selected {
+    border-color: #7c6f9f;
+    box-shadow: 0 0 0 2px #7c6f9f44;
+  }
+  .frame-content {
+    padding: 8px;
+    font-size: 11pt;
+    line-height: 1.4;
+    min-height: 24px;
+    outline: none;
+  }
+  .frame img { max-width: 100%; display: block; }
+  .frame-resize {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    cursor: se-resize;
+    background: #7c6f9f;
+    border-radius: 2px 0 2px 0;
+    opacity: 0.7;
+  }
+
+  /* ── ProseMirror (TipTap) editor ─────────────── */
+  .ProseMirror {
+    outline: none;
+    min-height: 943px;  /* A4 - margins */
+    color: #1a1a1a;
+    caret-color: #5a4f8f;
+    font-size: 12pt;
+    line-height: 1.6;
+  }
+
+  /* ── Typography styles ────────────────────────── */
+  .ProseMirror h1 {
+    font-size: 22pt;
+    font-weight: bold;
+    margin: 28pt 0 12pt;
+    color: #1a1a2e;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+  }
+  .ProseMirror h2 {
+    font-size: 16pt;
+    font-weight: bold;
+    margin: 20pt 0 9pt;
+    color: #2a2a3e;
+    line-height: 1.3;
+  }
+  .ProseMirror h3 {
+    font-size: 13pt;
+    font-weight: bold;
+    font-style: italic;
+    margin: 14pt 0 6pt;
+    color: #3a3a4e;
+  }
+  .ProseMirror h4 {
+    font-size: 12pt;
+    font-weight: bold;
+    margin: 12pt 0 4pt;
+    color: #444;
+  }
+  .ProseMirror p {
+    margin: 0 0 10pt;
+    text-align: justify;
+    hyphens: auto;
+    orphans: 3;
+    widows: 3;
+  }
+  .ProseMirror blockquote {
+    margin: 14pt 0 14pt 0;
+    padding: 10pt 16pt;
+    border-left: 4px solid #7c6f9f;
+    color: #444;
+    font-style: italic;
+    font-size: 11.5pt;
+    background: #f8f7ff;
+    border-radius: 0 4px 4px 0;
+  }
+  .ProseMirror code {
+    font-family: 'Courier New', monospace;
+    font-size: 10pt;
+    background: #f4f4f8;
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: #4a4a6a;
+  }
+  .ProseMirror pre {
+    background: #f4f4f8;
+    border: 1px solid #e0e0ec;
+    border-radius: 6px;
+    padding: 14pt;
+    margin: 14pt 0;
+    overflow: auto;
+  }
+  .ProseMirror pre code {
+    background: none;
+    padding: 0;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #333;
+  }
+  .ProseMirror ul, .ProseMirror ol {
+    margin: 0 0 10pt 20pt;
+    padding: 0;
+  }
+  .ProseMirror li {
+    margin-bottom: 4pt;
+  }
+  .ProseMirror table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 14pt 0;
+    font-size: 11pt;
+  }
+  .ProseMirror th {
+    background: #f0eff8;
+    font-weight: bold;
+    color: #2a2a4e;
+  }
+  .ProseMirror td, .ProseMirror th {
+    border: 1px solid #ccc;
+    padding: 7pt 10pt;
+    text-align: left;
+    vertical-align: top;
+  }
+  .ProseMirror tr:nth-child(even) td { background: #fafafa; }
+
+  /* selectedCell highlight */
+  .ProseMirror .selectedCell:after {
+    background: #7c6f9f22;
+    content: "";
+    left: 0; right: 0; top: 0; bottom: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 2;
+  }
+  .ProseMirror td, .ProseMirror th { position: relative; }
+
+  /* table column resize handle */
+  .ProseMirror .column-resize-handle {
+    background-color: #7c6f9f;
+    bottom: -2px;
+    position: absolute;
+    right: -2px;
+    pointer-events: none;
+    top: 0;
+    width: 4px;
+  }
+  .tableWrapper { overflow-x: auto; }
+  .resize-cursor { cursor: col-resize; }
+
+  /* ── Images ───────────────────────────────────── */
+  .ProseMirror img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 14pt auto;
+    border-radius: 2px;
+    cursor: default;
+  }
+  .ProseMirror img.ProseMirror-selectednode {
+    outline: 3px solid #7c6f9f;
+  }
+
+  /* ── Horizontal rule ──────────────────────────── */
+  .ProseMirror hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 24pt 0;
+  }
+
+  /* ── Math formulas ────────────────────────────── */
+  .math-node {
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .math-node.display {
+    display: block;
+    text-align: center;
+    margin: 16pt 0;
+  }
+  .math-node .katex { font-size: 1.1em; }
+  .math-node.display .katex-display { margin: 0; }
+
+  /* ── Inline citations ─────────────────────────── */
+  .citation-node {
+    color: #6b5fa0;
+    background: #f0eeff;
+    border-radius: 3px;
+    padding: 0 3px;
+    font-size: 10.5pt;
+    cursor: pointer;
+    border-bottom: 1px dotted #6b5fa0;
+    white-space: nowrap;
+  }
+
+  /* ── Caption paragraph ────────────────────────── */
+  .ProseMirror p[data-style="caption"],
+  p.caption {
+    text-align: center;
+    font-size: 10pt;
+    color: #666;
+    font-style: italic;
+    margin-top: -6pt;
+    margin-bottom: 14pt;
+  }
+
+  /* ── Placeholder ──────────────────────────────── */
+  .ProseMirror > p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: #bbb;
+    pointer-events: none;
+    height: 0;
+    font-style: italic;
+  }
+
+  /* ── Focus ring for selected cells ───────────── */
+  .ProseMirror:focus { outline: none; }
+</style>
+</head>
+<body>
+<div id="page-container">
+  <div class="page" id="main-page">
+    <div id="editor-mount"></div>
+    <div class="frames-layer" id="frames-layer"></div>
+    <div class="page-footer" id="page-footer">— 1 —</div>
+  </div>
+</div>
+
+<script type="module">
+// ── Load TipTap via esm.sh (bundled) ──────────────────────────────────────
+import { Editor, Extension, Node, mergeAttributes } from 'https://esm.sh/@tiptap/core@2.1.13?bundle'
+import StarterKit from 'https://esm.sh/@tiptap/starter-kit@2.1.13?bundle'
+import { Image } from 'https://esm.sh/@tiptap/extension-image@2.1.13?bundle'
+import Table from 'https://esm.sh/@tiptap/extension-table@2.1.13?bundle'
+import TableRow from 'https://esm.sh/@tiptap/extension-table-row@2.1.13?bundle'
+import TableHeader from 'https://esm.sh/@tiptap/extension-table-header@2.1.13?bundle'
+import TableCell from 'https://esm.sh/@tiptap/extension-table-cell@2.1.13?bundle'
+import TextAlign from 'https://esm.sh/@tiptap/extension-text-align@2.1.13?bundle'
+import Underline from 'https://esm.sh/@tiptap/extension-underline@2.1.13?bundle'
+import Typography from 'https://esm.sh/@tiptap/extension-typography@2.1.13?bundle'
+import Placeholder from 'https://esm.sh/@tiptap/extension-placeholder@2.1.13?bundle'
+import { Link } from 'https://esm.sh/@tiptap/extension-link@2.1.13?bundle'
+import { Color } from 'https://esm.sh/@tiptap/extension-color@2.1.13?bundle'
+import TextStyle from 'https://esm.sh/@tiptap/extension-text-style@2.1.13?bundle'
+import Superscript from 'https://esm.sh/@tiptap/extension-superscript@2.1.13?bundle'
+import Subscript from 'https://esm.sh/@tiptap/extension-subscript@2.1.13?bundle'
+import CharacterCount from 'https://esm.sh/@tiptap/extension-character-count@2.1.13?bundle'
+import FontFamily from 'https://esm.sh/@tiptap/extension-font-family@2.1.13?bundle'
+
+// ── Custom MathNode ────────────────────────────────────────────────────────
+const MathNode = Node.create({
+  name: 'math',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  addAttributes() {
+    return {
+      latex: { default: '' },
+      display: { default: false },
+    }
+  },
+  parseHTML() {
+    return [{ tag: 'span[data-math]' }]
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return ['span', mergeAttributes(HTMLAttributes, {
+      'data-math': node.attrs.latex,
+      class: 'math-node' + (node.attrs.display ? ' display' : ''),
+    })]
+  },
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement(node.attrs.display ? 'div' : 'span')
+      dom.className = 'math-node' + (node.attrs.display ? ' display' : '')
+      dom.setAttribute('data-latex', node.attrs.latex)
+      try {
+        katex.render(node.attrs.latex, dom, { displayMode: node.attrs.display, throwOnError: false })
+      } catch(e) {
+        dom.textContent = node.attrs.latex
+      }
+      return { dom, contentDOM: null }
+    }
+  }
+})
+
+// ── Custom CitationNode ────────────────────────────────────────────────────
+const CitationNode = Node.create({
+  name: 'citation',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  addAttributes() {
+    return {
+      key: { default: '' },
+      label: { default: '' },
+    }
+  },
+  parseHTML() { return [{ tag: 'span[data-citation]' }] },
+  renderHTML({ node, HTMLAttributes }) {
+    return ['span', mergeAttributes(HTMLAttributes, {
+      'data-citation': node.attrs.key,
+      class: 'citation-node',
+    }), node.attrs.label || `(${node.attrs.key})`]
+  },
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement('span')
+      dom.className = 'citation-node'
+      dom.setAttribute('data-citation', node.attrs.key)
+      dom.textContent = node.attrs.label || `(${node.attrs.key})`
+      dom.title = `Quelle: ${node.attrs.key}`
+      return { dom, contentDOM: null }
+    }
+  }
+})
+
+// ── Initialize editor ──────────────────────────────────────────────────────
+window.editor = new Editor({
+  element: document.getElementById('editor-mount'),
+  extensions: [
+    StarterKit.configure({
+      heading: { levels: [1, 2, 3, 4] },
+      codeBlock: { languageClassPrefix: 'language-' },
+    }),
+    Image.configure({ inline: false, allowBase64: true }),
+    Table.configure({ resizable: true }),
+    TableRow,
+    TableHeader,
+    TableCell,
+    TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
+    Underline,
+    Typography,
+    Placeholder.configure({
+      placeholder: 'Beginne hier zu schreiben… (Zotero: Strg+Z für Zitat)',
+    }),
+    Link.configure({ openOnClick: false, autolink: true }),
+    TextStyle,
+    Color,
+    FontFamily.configure({ types: ['textStyle'] }),
+    Superscript,
+    Subscript,
+    CharacterCount,
+    MathNode,
+    CitationNode,
+  ],
+  content: '',
+  autofocus: true,
+})
+
+// ── Notify Python bridge ───────────────────────────────────────────────────
+function notifyPython() {
+  if (!window.pyBridge) return
+  const json = JSON.stringify(window.editor.getJSON())
+  const chars = window.editor.storage.characterCount?.characters() ?? 0
+  const words = window.editor.storage.characterCount?.words() ?? 0
+  window.pyBridge.onContentChanged(json, words)
+}
+
+window.editor.on('update', notifyPython)
+window.editor.on('selectionUpdate', () => {
+  if (!window.pyBridge) return
+  const e = window.editor
+  const state = {
+    bold: e.isActive('bold'),
+    italic: e.isActive('italic'),
+    underline: e.isActive('underline'),
+    strike: e.isActive('strike'),
+    h1: e.isActive('heading', { level: 1 }),
+    h2: e.isActive('heading', { level: 2 }),
+    h3: e.isActive('heading', { level: 3 }),
+    bulletList: e.isActive('bulletList'),
+    orderedList: e.isActive('orderedList'),
+    blockquote: e.isActive('blockquote'),
+    code: e.isActive('code'),
+    alignLeft: e.isActive({ textAlign: 'left' }),
+    alignCenter: e.isActive({ textAlign: 'center' }),
+    alignRight: e.isActive({ textAlign: 'right' }),
+    alignJustify: e.isActive({ textAlign: 'justify' }),
+  }
+  window.pyBridge.onSelectionChanged(JSON.stringify(state))
+})
+
+// ── Page number update ─────────────────────────────────────────────────────
+function updatePageNumber() {
+  const el = document.getElementById('page-footer')
+  const wordsPerPage = 350
+  const words = window.editor.storage.characterCount?.words() ?? 0
+  const pages = Math.max(1, Math.ceil(words / wordsPerPage))
+  if (el) el.textContent = `— 1 / ${pages} —`
+}
+window.editor.on('update', updatePageNumber)
+
+// ── Global API (called from Python via runJavaScript) ─────────────────────
+window.getContent = () => JSON.stringify(window.editor.getJSON())
+window.getHTML = () => window.editor.getHTML()
+
+window.setContent = (json) => {
+  window.editor.commands.setContent(typeof json === 'string' ? JSON.parse(json) : json)
+}
+
+window.insertCitation = (key, label) => {
+  window.editor.chain().focus()
+    .insertContent({ type: 'citation', attrs: { key, label } })
+    .run()
+}
+
+window.insertFormula = (latex, display) => {
+  window.editor.chain().focus()
+    .insertContent({ type: 'math', attrs: { latex, display: !!display } })
+    .run()
+}
+
+window.insertTable = (rows, cols) => {
+  window.editor.chain().focus()
+    .insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: true })
+    .run()
+}
+
+window.insertImage = (src) => {
+  window.editor.chain().focus().setImage({ src }).run()
+}
+
+window.setHeading = (level) => {
+  if (level === 0) {
+    window.editor.chain().focus().setParagraph().run()
+  } else {
+    window.editor.chain().focus().toggleHeading({ level: parseInt(level) }).run()
+  }
+}
+
+window.toggleBold = () => window.editor.chain().focus().toggleBold().run()
+window.toggleItalic = () => window.editor.chain().focus().toggleItalic().run()
+window.toggleUnderline = () => window.editor.chain().focus().toggleUnderline().run()
+window.toggleStrike = () => window.editor.chain().focus().toggleStrike().run()
+window.toggleBlockquote = () => window.editor.chain().focus().toggleBlockquote().run()
+window.toggleBulletList = () => window.editor.chain().focus().toggleBulletList().run()
+window.toggleOrderedList = () => window.editor.chain().focus().toggleOrderedList().run()
+window.toggleCode = () => window.editor.chain().focus().toggleCode().run()
+window.toggleCodeBlock = () => window.editor.chain().focus().toggleCodeBlock().run()
+window.setTextAlign = (a) => window.editor.chain().focus().setTextAlign(a).run()
+window.addTableRow = () => window.editor.chain().focus().addRowAfter().run()
+window.addTableCol = () => window.editor.chain().focus().addColumnAfter().run()
+window.deleteTable = () => window.editor.chain().focus().deleteTable().run()
+
+window.getHeadings = () => {
+  const doc = window.editor.getJSON()
+  const headings = []
+  const traverse = (node) => {
+    if (node.type === 'heading') {
+      headings.push({
+        level: node.attrs?.level ?? 1,
+        text: (node.content || []).map(n => n.text || '').join(''),
+      })
+    }
+    ;(node.content || []).forEach(traverse)
+  }
+  traverse(doc)
+  return JSON.stringify(headings)
+}
+
+window.scrollToHeading = (text) => {
+  const els = document.querySelectorAll('h1,h2,h3,h4')
+  for (const el of els) {
+    if (el.textContent.trim() === text.trim()) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      break
+    }
+  }
+}
+
+window.undo = () => window.editor.chain().focus().undo().run()
+window.redo = () => window.editor.chain().focus().redo().run()
+
+// ── Floating Frames (InDesign-like) ───────────────────────────────────────
+let frameIdCounter = 0
+const framesData = {}
+
+function createFrame(x, y, w, h, type, content) {
+  const id = 'frame-' + (++frameIdCounter)
+  const layer = document.getElementById('frames-layer')
+
+  const frame = document.createElement('div')
+  frame.className = 'frame'
+  frame.id = id
+  frame.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`
+
+  let inner
+  if (type === 'image') {
+    inner = document.createElement('img')
+    inner.src = content
+    inner.style.width = '100%'
+    inner.style.height = '100%'
+    inner.style.objectFit = 'contain'
+  } else {
+    inner = document.createElement('div')
+    inner.className = 'frame-content'
+    inner.contentEditable = true
+    inner.innerHTML = content || ''
+    inner.spellcheck = true
+  }
+  frame.appendChild(inner)
+
+  const resizeHandle = document.createElement('div')
+  resizeHandle.className = 'frame-resize'
+  frame.appendChild(resizeHandle)
+
+  // Drag
+  let dragging = false, dx = 0, dy = 0
+  frame.addEventListener('mousedown', (e) => {
+    if (e.target === resizeHandle || e.target === inner) return
+    dragging = true
+    dx = e.clientX - frame.offsetLeft
+    dy = e.clientY - frame.offsetTop
+    document.querySelectorAll('.frame').forEach(f => f.classList.remove('selected'))
+    frame.classList.add('selected')
+    e.preventDefault()
+  })
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return
+    frame.style.left = (e.clientX - dx) + 'px'
+    frame.style.top = (e.clientY - dy) + 'px'
+  })
+  document.addEventListener('mouseup', () => { dragging = false })
+
+  // Resize
+  let resizing = false, startW, startH, startX, startY
+  resizeHandle.addEventListener('mousedown', (e) => {
+    resizing = true
+    startW = frame.offsetWidth
+    startH = frame.offsetHeight
+    startX = e.clientX
+    startY = e.clientY
+    e.preventDefault()
+    e.stopPropagation()
+  })
+  document.addEventListener('mousemove', (e) => {
+    if (!resizing) return
+    frame.style.width = Math.max(80, startW + e.clientX - startX) + 'px'
+    frame.style.height = Math.max(40, startH + e.clientY - startY) + 'px'
+  })
+  document.addEventListener('mouseup', () => { resizing = false })
+
+  // Double-click to delete when empty
+  frame.addEventListener('dblclick', (e) => {
+    if (e.target === frame && type !== 'image' && inner.textContent.trim() === '') {
+      frame.remove()
+    }
+  })
+
+  layer.appendChild(frame)
+  framesData[id] = { type, x, y, w, h }
+  return id
+}
+
+window.addTextFrame = (x, y, w, h) => createFrame(x ?? 100, y ?? 100, w ?? 200, h ?? 120, 'text', '')
+window.addImageFrame = (src, x, y, w, h) => createFrame(x ?? 100, y ?? 100, w ?? 300, h ?? 200, 'image', src)
+window.getFrames = () => {
+  const frames = []
+  document.querySelectorAll('.frame').forEach(f => {
+    frames.push({
+      id: f.id,
+      x: f.offsetLeft,
+      y: f.offsetTop,
+      w: f.offsetWidth,
+      h: f.offsetHeight,
+    })
+  })
+  return JSON.stringify(frames)
+}
+
+// ── QWebChannel setup ─────────────────────────────────────────────────────
+function setupWebChannel() {
+  if (typeof QWebChannel !== 'undefined' && typeof qt !== 'undefined' && qt.webChannelTransport) {
+    new QWebChannel(qt.webChannelTransport, (channel) => {
+      window.pyBridge = channel.objects.bridge
+      console.log('QWebChannel connected')
+    })
+  } else {
+    setTimeout(setupWebChannel, 150)
+  }
+}
+setupWebChannel()
+
+// ── Keyboard shortcut: focus back on Escape ────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.frame').forEach(f => f.classList.remove('selected'))
+  }
+})
+
+console.log('Dissertation editor initialized')
+</script>
+</body>
+</html>
