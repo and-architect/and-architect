@@ -4,7 +4,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # Prerequisites:
-#   .NET 7 SDK   → https://dotnet.microsoft.com/download/dotnet/7.0
+#   .NET SDK 7+  → https://dotnet.microsoft.com/download  (SDK 10 works fine)
 #   Rhino 8 Mac  → https://www.rhino3d.com/download/
 #
 # Usage:
@@ -46,11 +46,11 @@ dotnet build "$PLUGIN_NAME.csproj" \
     --configuration Release \
     --verbosity minimal
 
-GHA_SRC="$PLUGIN_DIR/bin/Release/net10.0/$PLUGIN_NAME.gha"
+GHA_SRC="$PLUGIN_DIR/bin/Release/net7.0/$PLUGIN_NAME.gha"
 
 if [ ! -f "$GHA_SRC" ]; then
     # Fallback: DLL renamed manually
-    DLL_SRC="$PLUGIN_DIR/bin/Release/net10.0/$PLUGIN_NAME.dll"
+    DLL_SRC="$PLUGIN_DIR/bin/Release/net7.0/$PLUGIN_NAME.dll"
     if [ -f "$DLL_SRC" ]; then
         cp "$DLL_SRC" "$GHA_SRC"
         echo "✓  Renamed .dll → .gha"
