@@ -30,7 +30,7 @@ namespace AndArchitectGH.Components
 
         public override Guid ComponentGuid =>
             new Guid("E0F1A2B3-C4D5-6789-4567-901234567890");
-        protected override Bitmap Icon => null!;
+        protected override Bitmap? Icon => ComponentIcons.OAuthIcon;
 
         // ── Inputs ─────────────────────────────────────────────────────────────
 

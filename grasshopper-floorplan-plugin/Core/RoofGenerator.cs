@@ -35,21 +35,30 @@ namespace AndArchitectGH.Core
         /// <param name="baseZ">Z of top-floor ceiling / eaves level</param>
         /// <param name="pitchDeg">Roof pitch in degrees (ignored for Flat)</param>
         /// <param name="type">Roof shape</param>
-        /// <param name="overhang">Eave overhang (m)</param>
+        /// <param name="eaveOverhang">Traufüberstand – overhang on the eave sides (m)</param>
+        /// <param name="gableOverhang">Ortgangüberstand – overhang on the gable ends (m); -1 = same as eaveOverhang</param>
         public static RoofGeometry Generate(
-            double  footprintMinX,
-            double  footprintMinY,
-            double  footprintWidth,
-            double  footprintDepth,
-            double  baseZ,
-            double  pitchDeg = 35.0,
-            RoofType type    = RoofType.Gable,
-            double  overhang = 0.5)
+            double   footprintMinX,
+            double   footprintMinY,
+            double   footprintWidth,
+            double   footprintDepth,
+            double   baseZ,
+            double   pitchDeg      = 35.0,
+            RoofType type          = RoofType.Gable,
+            double   eaveOverhang  = 0.5,
+            double   gableOverhang = -1.0)
         {
-            double x0 = footprintMinX - overhang;
-            double y0 = footprintMinY - overhang;
-            double x1 = footprintMinX + footprintWidth  + overhang;
-            double y1 = footprintMinY + footprintDepth  + overhang;
+            if (gableOverhang < 0) gableOverhang = eaveOverhang;
+
+            // Gable roof: ridge runs N-S, eaves are E+W sides, gable ends are N+S
+            // For all other types we use eaveOverhang uniformly
+            bool distinctOverhang = (type == RoofType.Gable || type == RoofType.Butterfly)
+                                    && Math.Abs(eaveOverhang - gableOverhang) > 1e-6;
+
+            double x0 = footprintMinX - eaveOverhang;
+            double y0 = footprintMinY - (distinctOverhang ? gableOverhang : eaveOverhang);
+            double x1 = footprintMinX + footprintWidth  + eaveOverhang;
+            double y1 = footprintMinY + footprintDepth  + (distinctOverhang ? gableOverhang : eaveOverhang);
             double w  = x1 - x0;
             double d  = y1 - y0;
 

@@ -34,7 +34,7 @@ namespace AndArchitectGH.Components
 
         public override Guid ComponentGuid =>
             new Guid("D9E0F1A2-B3C4-5678-3456-890123456789");
-        protected override Bitmap Icon => null!;
+        protected override Bitmap? Icon => ComponentIcons.Roof;
 
         // ── Inputs ─────────────────────────────────────────────────────────────
 
@@ -48,8 +48,11 @@ namespace AndArchitectGH.Components
                 GH_ParamAccess.item, "Gable");
             pManager.AddNumberParameter("Pitch",     "P",
                 "Roof pitch in degrees (ignored for Flat, default 35°)",          GH_ParamAccess.item, 35.0);
-            pManager.AddNumberParameter("Overhang",  "Ov",
-                "Eave overhang / Dachüberstand (m, default 0.5)",                GH_ParamAccess.item, 0.5);
+            pManager.AddNumberParameter("Overhang",      "Ov",
+                "Traufüberstand – eave overhang on the long sides (m, default 0.5)",   GH_ParamAccess.item, 0.5);
+            pManager.AddNumberParameter("GableOverhang", "OG",
+                "Ortgangüberstand – gable-end overhang (m). " +
+                "Leave at -1 to match Overhang. Only affects Gable and Butterfly roofs.", GH_ParamAccess.item, -1.0);
             pManager.AddBooleanParameter("AtTop",    "AT",
                 "True = roof sits on top of building  |  False = at custom Z",   GH_ParamAccess.item, true);
             pManager.AddNumberParameter("BaseZ",     "Z",
@@ -57,6 +60,8 @@ namespace AndArchitectGH.Components
 
             pManager[4].Optional = true;
             pManager[5].Optional = true;
+            pManager[6].Optional = true;
+            pManager[7].Optional = true;
         }
 
         // ── Outputs ────────────────────────────────────────────────────────────
@@ -95,19 +100,21 @@ namespace AndArchitectGH.Components
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            var    buildGoo = default(IGH_Goo);
-            string typeStr  = "Gable";
-            double pitch    = 35.0;
-            double overhang = 0.5;
-            bool   atTop    = true;
-            double baseZ    = 0.0;
+            var    buildGoo     = default(IGH_Goo);
+            string typeStr      = "Gable";
+            double pitch        = 35.0;
+            double overhang     = 0.5;
+            double gableOverhang = -1.0;
+            bool   atTop        = true;
+            double baseZ        = 0.0;
 
             if (!DA.GetData(0, ref buildGoo)) return;
             DA.GetData(1, ref typeStr);
             DA.GetData(2, ref pitch);
             DA.GetData(3, ref overhang);
-            DA.GetData(4, ref atTop);
-            DA.GetData(5, ref baseZ);
+            DA.GetData(4, ref gableOverhang);
+            DA.GetData(5, ref atTop);
+            DA.GetData(6, ref baseZ);
 
             // Unpack building
             Building? building = null;
@@ -132,7 +139,7 @@ namespace AndArchitectGH.Components
             }
 
             // Validate pitch
-            pitch = Math.Clamp(pitch, 0.1, 89.9);
+            pitch    = Math.Clamp(pitch, 0.1, 89.9);
             overhang = Math.Max(0, overhang);
 
             // Base elevation
@@ -144,15 +151,17 @@ namespace AndArchitectGH.Components
                 bb.Min.X, bb.Min.Y,
                 building.FootprintWidth,
                 building.FootprintDepth,
-                ez, pitch, roofType, overhang);
+                ez, pitch, roofType, overhang, gableOverhang);
 
             // Info string
+            double effectiveGable = gableOverhang < 0 ? overhang : gableOverhang;
             string info =
                 $"Dachtyp: {roofType}  " +
                 $"Neigung: {pitch:F1}°  " +
                 $"Traufhöhe: {ez:F2} m  " +
                 $"Firsthöhe: {roof.RidgeHeight:F2} m  " +
-                $"Überstand: {overhang:F2} m";
+                $"Traufüberstand: {overhang:F2} m  " +
+                $"Ortgang: {effectiveGable:F2} m";
 
             DA.SetDataList(0, roof.Surfaces);
             DA.SetDataList(1, roof.RidgeLines);

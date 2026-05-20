@@ -25,7 +25,7 @@ namespace AndArchitectGH.Components
         { }
 
         public override Guid ComponentGuid => new Guid("B7C8D9E0-F1A2-3456-1234-678901234567");
-        protected override Bitmap Icon => null!;
+        protected override Bitmap? Icon => ComponentIcons.Shadow;
 
         // ── Inputs ─────────────────────────────────────────────────────────────
 
