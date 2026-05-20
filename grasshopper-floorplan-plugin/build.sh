@@ -46,11 +46,11 @@ dotnet build "$PLUGIN_NAME.csproj" \
     --configuration Release \
     --verbosity minimal
 
-GHA_SRC="$PLUGIN_DIR/bin/Release/net7.0/$PLUGIN_NAME.gha"
+GHA_SRC="$PLUGIN_DIR/bin/Release/net10.0/$PLUGIN_NAME.gha"
 
 if [ ! -f "$GHA_SRC" ]; then
     # Fallback: DLL renamed manually
-    DLL_SRC="$PLUGIN_DIR/bin/Release/net7.0/$PLUGIN_NAME.dll"
+    DLL_SRC="$PLUGIN_DIR/bin/Release/net10.0/$PLUGIN_NAME.dll"
     if [ -f "$DLL_SRC" ]; then
         cp "$DLL_SRC" "$GHA_SRC"
         echo "✓  Renamed .dll → .gha"
@@ -72,9 +72,11 @@ echo "╔═══════════════════════�
 echo "║   Done! Restart Rhino 8 to load the plugin.         ║"
 echo "╚══════════════════════════════════════════════════════╝"
 echo ""
-echo "  Components in Grasshopper:"
-echo "    AND Architect → 01 Setup    : AND_Room, AND_Building, AND_Orient"
-echo "    AND Architect → 02 Generate : AND_Gen,  AND_Solar"
-echo "    AND Architect → 03 AI       : AND_AI"
-echo "    AND Architect → 04 Visualize: AND_Viz"
+echo "  Komponenten (AND Architect):"
+echo "    01 Setup     : AND_Room · AND_Building · AND_Orient"
+echo "    02 Generate  : AND_Gen  · AND_Shadow   · AND_Roof"
+echo "    03 AI        : AND_AI   · AND_OAuth"
+echo "    04 Visualize : AND_Viz"
+echo ""
+echo "  KI-Anbieter: Claude (API-Key / OAuth) | OpenAI | Gemini"
 echo ""

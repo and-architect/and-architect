@@ -56,15 +56,25 @@ namespace AndArchitectGH.Core
         public Box PlacedBox { get; set; } = Box.Unset;
         public bool IsPlaced { get; set; } = false;
 
-        // Cached dimensions from EstimateDimensions()
-        public double Width { get; private set; }
-        public double Depth { get; private set; }
+        // Cached/explicit dimensions
+        public double Width  { get; private set; }
+        public double Depth  { get; private set; }
+        public bool ExplicitDimensions { get; private set; }
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        /// <summary>Estimate width/depth from area using a golden-ratio aspect.</summary>
+        /// <summary>Store user-provided width × depth; skips auto-estimation in solver.</summary>
+        public void SetExplicitDimensions(double w, double d)
+        {
+            Width = w;
+            Depth = d;
+            ExplicitDimensions = true;
+        }
+
+        /// <summary>Estimate width/depth from area using a golden-ratio aspect (only if not explicit).</summary>
         public void EstimateDimensions(double aspectRatio = 1.4)
         {
+            if (ExplicitDimensions) return;
             Width = Math.Sqrt(Area / aspectRatio);
             Depth = Area / Width;
         }
@@ -83,10 +93,14 @@ namespace AndArchitectGH.Core
                 MustBeAway = new List<string>(MustBeAway),
                 PreferredViewDirection = PreferredViewDirection,
                 Priority = Priority,
-                MinCeilingHeight = MinCeilingHeight,
-                Width = Width,
-                Depth = Depth
-            };
+                MinCeilingHeight = MinCeilingHeight
+            }.WithDimensions(Width, Depth, ExplicitDimensions);
+        }
+
+        private Room WithDimensions(double w, double d, bool explicit_)
+        {
+            Width = w; Depth = d; ExplicitDimensions = explicit_;
+            return this;
         }
 
         public override string ToString() =>
