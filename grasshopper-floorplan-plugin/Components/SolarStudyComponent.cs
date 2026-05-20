@@ -170,9 +170,7 @@ namespace AndArchitectGH.Components
                     bool exposed = false;
                     foreach (var face in brep.Faces)
                     {
-                        face.ClosedCurveRegion(0.5, 0.5, out _);
-                        double u, v;
-                        face.ClosestPoint(bb.Center, out u, out v);
+                        face.ClosestPoint(bb.Center, out double u, out double v);
                         var normal = face.NormalAt(u, v);
                         double dot = Vector3d.Multiply(normal, -sv);  // sv points toward surface
                         if (dot > 0.15)  // >15° incidence

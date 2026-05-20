@@ -259,9 +259,7 @@ namespace AndArchitectGH.Core
             var pts = new List<Point3d>();
             foreach (var face in brep.Faces)
             {
-                face.GetSurface()?.ClosestPoint(
-                    brep.GetBoundingBox(false).Center, out double u, out double v);
-                face.ClosestPoint(brep.GetBoundingBox(false).Center, out u, out v);
+                face.ClosestPoint(brep.GetBoundingBox(false).Center, out double u, out double v);
                 var normal = face.NormalAt(u, v);
 
                 // Sample only outward-facing faces (not bottom)

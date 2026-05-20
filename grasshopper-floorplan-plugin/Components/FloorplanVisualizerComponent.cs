@@ -141,7 +141,6 @@ namespace AndArchitectGH.Components
 
             foreach (var face in brep.Faces)
             {
-                face.ClosedCurveRegion(0.5, 0.5, out _);
                 var bb = face.GetBoundingBox(false);
                 double z = bb.Center.Z;
                 if (z < minZ) { minZ = z; bottom = face; }
