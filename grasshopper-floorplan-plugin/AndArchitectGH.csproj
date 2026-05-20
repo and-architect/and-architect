@@ -21,7 +21,9 @@
       The Grasshopper NuGet package targets .NETFramework but works fine under Rhino's
       .NET 7 runtime because Rhino provides the actual assemblies at load time.
     -->
-    <NoWarn>NU1701</NoWarn>
+    <!-- NU1701 = package restored for different framework (Grasshopper NuGet targets .NETFramework)  -->
+    <!-- CA1416 = System.Drawing "Windows only" – false positive; Rhino ships cross-platform impl.  -->
+    <NoWarn>NU1701;CA1416</NoWarn>
   </PropertyGroup>
 
   <!-- Rename output to .gha so Grasshopper picks it up -->

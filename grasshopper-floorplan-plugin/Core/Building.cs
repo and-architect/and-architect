@@ -100,7 +100,7 @@ namespace AndArchitectGH.Core
 
             var plane    = new Plane(new Point3d(_bbox.Min.X, _bbox.Min.Y, zBottom), Vector3d.ZAxis);
             var extrusion = Extrusion.Create(
-                curve.DuplicateCurve().ProjectToPlane(Plane.WorldXY) ?? curve,
+                Curve.ProjectToPlane(curve.DuplicateCurve(), Plane.WorldXY) ?? curve,
                 total, true);
 
             if (extrusion != null) return extrusion.ToBrep(true) ??
