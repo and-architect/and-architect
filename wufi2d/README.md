@@ -69,7 +69,7 @@ Die Testsuite vergleicht mit analytischen Lösungen, nicht nur mit sich selbst:
 | Wärmebrücke (Balkonplatte) | `Ψ = L2D − ΣU·l`, EN ISO 10211 | Ψ = 0,94 W/(m·K), plausibel |
 
 ```bash
-python -m pytest wufi2d/tests -q     # 111 Tests, ca. 25 s
+python -m pytest wufi2d/tests -q     # 121 Tests, ca. 30 s
 ```
 
 **Nicht enthalten** (bewusste Grenzen): Luftströmung/Konvektion in Hohlräumen
@@ -253,7 +253,7 @@ Gemessen auf einem Standard-Kern (SciPy vorhanden):
 |---|---|---|---|
 | Wärmebrücke stationär (Beispiel 2) | 4 300 | — | < 1 s |
 | 1D-Aufbau, 2 Jahre, dt = 1 h (Beispiel 1) | 82 | 17 500 | ≈ 3 min |
-| 2D-Detail, 1 Jahr, dt = 2 h (Beispiel 3) | 2 000 | 4 400 | ≈ 6 min |
+| 2D-Detail, 1 Jahr, dt = 2 h (Beispiel 3) | 1 900 | 4 400 | 6,2 min (gemessen) |
 
 Schneller wird es mit größerem `dt` (Feuchte reagiert träge — 2–6 h sind für
 Jahresrechnungen meist ausreichend), gröberem `max_cell` und größerem
@@ -284,7 +284,7 @@ wufi2d/
 ├─ grasshopper/      8 Skriptkomponenten (Rhino 8/9, Python 3)
 ├─ rhino/            Befehlsskripte
 ├─ beispiele/        drei durchgerechnete Fälle
-└─ tests/            111 Tests (Physik, Gitter, Löser-Verifikation, Adapter)
+└─ tests/            121 Tests (Physik, Gitter, Löser-Verifikation, Adapter)
 ```
 
 Der Rechenkern kennt Rhino nicht — `rhino.py` ist die einzige Brücke, und ihre

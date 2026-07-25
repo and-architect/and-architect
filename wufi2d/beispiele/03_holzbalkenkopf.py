@@ -185,6 +185,10 @@ def main() -> None:
     print("\nWassergehalt des Balkens:")
     for jahr, wert in analysis.yearly_water_content(ergebnis, "Brettschichtholz"):
         print(f"  nach {jahr:.0f} Jahr(en): {wert:.3f} kg")
+    if args.jahre < 3:
+        print("  Hinweis: Das erste Jahr ist vom Anfangszustand gepraegt. Fuer eine "
+              "Beurteilung\n  mindestens 3 Jahre rechnen (--jahre 3) und das letzte "
+              "Jahr bewerten\n  (analysis.annual_balance).")
 
     ziel = Path(__file__).with_name("03_holzbalkenkopf_ergebnis.npz")
     print(f"\nFelder gespeichert: {ergebnis.to_npz(ziel)}")

@@ -490,3 +490,31 @@ def test_solver_requires_boundary_for_steady_state():
     solver = Wufi2DSolver(grid, materials, boundaries=bnd.BoundarySet())
     with pytest.raises(SolverError):
         solver.solve_steady_state()
+
+
+def test_numpy_fallback_matches_scipy_in_2d_with_inactive_cells():
+    """SOR-Fallback auch bei nichtrechteckigem Gebiet identisch."""
+    materials = MaterialLibrary([_dry_material("Beton", lambda_dry=2.1),
+                                 _dry_material("Daemmung", lambda_dry=0.04)])
+    regions = [Region("Beton", rectangle(0.0, 0.0, 0.3, 0.1)),
+               Region("Beton", rectangle(0.0, 0.1, 0.1, 0.2)),
+               Region("Daemmung", rectangle(0.1, 0.1, 0.05, 0.2), priority=1)]
+    boundaries = bnd.BoundarySet()
+    boundaries.add(bnd.SideSelector("bottom"),
+                   bnd.exterior_surface(ConstantClimate(-5.0, 0.8),
+                                        solar_absorptance=0.0, rain_absorption=0.0,
+                                        emissivity=0.0))
+    boundaries.add(bnd.SideSelector("top"),
+                   bnd.interior_surface(ConstantClimate(20.0, 0.5)))
+    fields = []
+    for use_scipy in (True, False):
+        grid = build_grid(regions, materials=materials, max_cell=0.02, min_cell=0.01)
+        solver = Wufi2DSolver(
+            grid, materials, boundaries,
+            initial=InitialConditions(temperature=10.0, rh=0.6),
+            options=SolverOptions(duration=6 * HOUR, dt=HOUR,
+                                  output_interval=6 * HOUR, use_scipy=use_scipy))
+        results = solver.run()
+        assert np.isnan(results.temperature[-1][~grid.active]).all()
+        fields.append(results.temperature[-1])
+    assert np.nanmax(np.abs(fields[0] - fields[1])) < 1e-5
