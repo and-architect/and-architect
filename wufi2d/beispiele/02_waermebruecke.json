@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "name": "Auskragende Balkonplatte im WDVS",
+  "description": "Klassische zweidimensionale Waermebruecke: eine Stahlbetonplatte durchstoesst das Waermedaemmverbundsystem und kragt 600 mm aus. Ausgewertet werden L2D, Psi und f_Rsi bei 20 / -5 degC. Die Schnittkanten des Ausschnitts (unten, oben, Plattenschnitt innen) sind adiabat.",
+  "grid": {
+    "max_cell": 0.025,
+    "min_cell": 0.004,
+    "growth": 1.3,
+    "depth": 1.0
+  },
+  "regions": [
+    {
+      "name": "Aussenputz",
+      "material": "Kalkzementputz",
+      "polygon": [[-0.01, 0.0], [0.0, 0.0], [0.0, 1.2], [-0.01, 1.2]]
+    },
+    {
+      "name": "Waermedaemmverbundsystem 160 mm",
+      "material": "EPS 035",
+      "polygon": [[0.0, 0.0], [0.16, 0.0], [0.16, 1.2], [0.0, 1.2]]
+    },
+    {
+      "name": "Aussenwand Kalksandstein 200 mm",
+      "material": "Kalksandstein",
+      "polygon": [[0.16, 0.0], [0.36, 0.0], [0.36, 1.2], [0.16, 1.2]]
+    },
+    {
+      "name": "Innenputz",
+      "material": "Gipsputz",
+      "polygon": [[0.36, 0.0], [0.375, 0.0], [0.375, 1.2], [0.36, 1.2]]
+    },
+    {
+      "name": "Balkonplatte 200 mm, 600 mm auskragend",
+      "material": "Stahlbeton",
+      "polygon": [[-0.6, 0.55], [1.0, 0.55], [1.0, 0.75], [-0.6, 0.75]],
+      "priority": 1
+    }
+  ],
+  "boundaries": [
+    {
+      "selector": {"box": [-0.7, -0.1, 0.001, 1.3]},
+      "condition": {
+        "type": "exchange",
+        "name": "aussen",
+        "climate": {"type": "constant", "temperature": -5.0, "rh": 0.8},
+        "transfer": {"alpha": 25.0, "sd": 0.0, "solar_absorptance": 0.0,
+                     "rain_absorption": 0.0, "emissivity": 0.0}
+      }
+    },
+    {
+      "selector": {"box": [0.374, -0.1, 1.1, 1.3]},
+      "condition": {
+        "type": "exchange",
+        "name": "innen",
+        "climate": {"type": "constant", "temperature": 20.0, "rh": 0.5},
+        "transfer": {"alpha": 7.7, "sd": 0.0, "solar_absorptance": 0.0,
+                     "rain_absorption": 0.0, "emissivity": 0.0}
+      }
+    },
+    {
+      "selector": {"box": [0.99, 0.5, 1.01, 0.8], "sides": ["rechts"]},
+      "condition": {"type": "adiabatic", "name": "adiabat"}
+    }
+  ],
+  "initial": {
+    "temperature": 10.0,
+    "rh": 0.6
+  },
+  "options": {
+    "duration": 2592000.0,
+    "dt": 21600.0,
+    "output_interval": 259200.0,
+    "latent_heat": true,
+    "liquid_transport": true
+  }
+}
